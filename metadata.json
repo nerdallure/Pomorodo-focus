@@ -1,0 +1,7 @@
+{
+  "name": "Pomodoro Art Focus",
+  "description": "A focus and Pomodoro timer featuring customizable session art, ambient visual themes, and motivational focus environments.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
