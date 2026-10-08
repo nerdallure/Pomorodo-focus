@@ -4,6 +4,7 @@ import com.example.model.ArtTheme
 import com.example.model.MotifType
 import com.example.model.ParticleEffectType
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 class PomodoroRepository(private val dao: PomodoroDao) {
@@ -11,6 +12,19 @@ class PomodoroRepository(private val dao: PomodoroDao) {
     val allSessions: Flow<List<SessionEntity>> = dao.getAllSessions()
     val completedSessions: Flow<List<SessionEntity>> = dao.getCompletedSessions()
     val userSettings: Flow<UserSettingsEntity> = dao.getUserSettings().map { it ?: UserSettingsEntity() }
+
+    val allTasks: Flow<List<TaskEntity>> = dao.getAllTasks()
+    val allSubtasks: Flow<List<SubTaskEntity>> = dao.getAllSubtasks()
+
+    val tasksWithSubtasks: Flow<List<TaskWithSubtasks>> = combine(allTasks, allSubtasks) { tasks, subtasks ->
+        val subtasksByTaskId = subtasks.groupBy { it.taskId }
+        tasks.map { task ->
+            TaskWithSubtasks(
+                task = task,
+                subtasks = subtasksByTaskId[task.id] ?: emptyList()
+            )
+        }
+    }
 
     val customArtThemes: Flow<List<ArtTheme>> = dao.getCustomArtThemes().map { list ->
         list.map { entity ->
@@ -87,4 +101,25 @@ class PomodoroRepository(private val dao: PomodoroDao) {
     suspend fun deleteCustomArtTheme(id: String) = dao.deleteCustomArtTheme(id)
 
     suspend fun updateSettings(settings: UserSettingsEntity) = dao.saveUserSettings(settings)
+
+    // Task Operations
+    suspend fun insertTask(task: TaskEntity): Long = dao.insertTask(task)
+
+    suspend fun updateTask(task: TaskEntity) = dao.updateTask(task)
+
+    suspend fun deleteTask(id: Long) {
+        dao.deleteSubtasksForTask(id)
+        dao.deleteTask(id)
+    }
+
+    suspend fun recordPomodoroForTask(title: String, minutes: Int) {
+        dao.recordPomodoroForTask(title, minutes)
+    }
+
+    // Subtask Operations
+    suspend fun insertSubtask(subtask: SubTaskEntity): Long = dao.insertSubtask(subtask)
+
+    suspend fun updateSubtask(subtask: SubTaskEntity) = dao.updateSubtask(subtask)
+
+    suspend fun deleteSubtask(id: Long) = dao.deleteSubtask(id)
 }

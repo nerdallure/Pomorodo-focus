@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -39,4 +40,42 @@ interface PomodoroDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveUserSettings(settings: UserSettingsEntity)
+
+    // Tasks Management
+    @Query("SELECT * FROM tasks ORDER BY isCompleted ASC, CASE priority WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 ELSE 4 END ASC, id DESC")
+    fun getAllTasks(): Flow<List<TaskEntity>>
+
+    @Query("SELECT * FROM tasks WHERE id = :id LIMIT 1")
+    suspend fun getTaskById(id: Long): TaskEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTask(task: TaskEntity): Long
+
+    @Update
+    suspend fun updateTask(task: TaskEntity)
+
+    @Query("DELETE FROM tasks WHERE id = :id")
+    suspend fun deleteTask(id: Long)
+
+    @Query("UPDATE tasks SET completedPomodoros = completedPomodoros + 1, totalMinutesSpent = totalMinutesSpent + :minutes WHERE title = :title")
+    suspend fun recordPomodoroForTask(title: String, minutes: Int)
+
+    // Subtasks / Checklist
+    @Query("SELECT * FROM subtasks ORDER BY orderIndex ASC, id ASC")
+    fun getAllSubtasks(): Flow<List<SubTaskEntity>>
+
+    @Query("SELECT * FROM subtasks WHERE taskId = :taskId ORDER BY orderIndex ASC, id ASC")
+    fun getSubtasksForTask(taskId: Long): Flow<List<SubTaskEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSubtask(subtask: SubTaskEntity): Long
+
+    @Update
+    suspend fun updateSubtask(subtask: SubTaskEntity)
+
+    @Query("DELETE FROM subtasks WHERE id = :id")
+    suspend fun deleteSubtask(id: Long)
+
+    @Query("DELETE FROM subtasks WHERE taskId = :taskId")
+    suspend fun deleteSubtasksForTask(taskId: Long)
 }

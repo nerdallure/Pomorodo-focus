@@ -1,63 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <!-- Pomodoro Top Stem and Leaf -->
-    <path
-        android:pathData="M54,28 C54,23 57,21 61,20 C61,24 58,28 54,29 Z"
-        android:fillColor="#81C784" />
-    <path
-        android:pathData="M54,29 C52,24 47,23 44,24 C46,27 49,29 54,29 Z"
-        android:fillColor="#66BB6A" />
-    <path
-        android:pathData="M53,28 L55,28 L54.5,23 L53.5,23 Z"
-        android:fillColor="#4CAF50" />
-
-    <!-- Pomodoro Body (Artistic Clock & Fruit Silhouette) -->
-    <path
-        android:pathData="M54,30 C69,30 80,41 80,56 C80,72 68,84 54,84 C40,84 28,72 28,56 C28,41 39,30 54,30 Z">
-        <aapt:attr name="android:fillColor">
-            <gradient
-                android:startX="28"
-                android:startY="30"
-                android:endX="80"
-                android:endY="84"
-                android:type="linear">
-                <item android:offset="0.0" android:color="#FF7043" />
-                <item android:offset="0.5" android:color="#FF5252" />
-                <item android:offset="1.0" android:color="#D32F2F" />
-            </gradient>
-        </aapt:attr>
-    </path>
-
-    <!-- Inner Dial Track / Art Brush Arc -->
-    <path
-        android:pathData="M54,37 C64.5,37 73,45.5 73,56 C73,66.5 64.5,75 54,75 C43.5,75 35,66.5 35,56 C35,45.5 43.5,37 54,37 Z"
-        android:strokeWidth="2.5"
-        android:strokeColor="#40FFFFFF"
-        android:fillColor="#00000000" />
-
-    <!-- Active Timer Arc (e.g. 75% focus done) -->
-    <path
-        android:pathData="M54,37 C64.5,37 73,45.5 73,56 C73,66.5 64.5,75 54,75"
-        android:strokeWidth="3.5"
-        android:strokeColor="#FFFFFF"
-        android:strokeLineCap="round"
-        android:fillColor="#00000000" />
-
-    <!-- Artistic Focus Spark / Star Center -->
-    <path
-        android:pathData="M54,49 L55.5,53.5 L60,54 L56,57 L57.5,61.5 L54,58.5 L50.5,61.5 L52,57 L48,54 L52.5,53.5 Z"
-        android:fillColor="#FFF9C4" />
-
-    <!-- Tiny Palette Dots -->
-    <path
-        android:pathData="M43,48m-2,0a2,2 0 1,0 4,0a2,2 0 1,0 -4,0"
-        android:fillColor="#FFE082" />
-    <path
-        android:pathData="M65,48m-2,0a2,2 0 1,0 4,0a2,2 0 1,0 -4,0"
-        android:fillColor="#80DEEA" />
-</vector>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:width="66dp"
+        android:height="66dp"
+        android:drawable="@drawable/pomodoro_art_icon"
+        android:gravity="center" />
+</layer-list>

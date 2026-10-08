@@ -304,54 +304,20 @@ fun TimerScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Timer Circular Ring
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(190.dp)
-                            .clip(CircleShape)
-                            .clickable {
-                                if (uiState.isRunning) onPause() else onStart()
-                            }
-                    ) {
-                        CircularProgressIndicator(
-                            progress = { 1f },
-                            modifier = Modifier.size(190.dp),
-                            color = DarkSurfaceVariant.copy(alpha = 0.7f),
-                            strokeWidth = 9.dp,
-                            trackColor = Color.Transparent,
-                            strokeCap = StrokeCap.Round
-                        )
-                        CircularProgressIndicator(
-                            progress = { animatedProgress },
-                            modifier = Modifier.size(190.dp),
-                            color = modeColor,
-                            strokeWidth = 9.dp,
-                            trackColor = Color.Transparent,
-                            strokeCap = StrokeCap.Round
-                        )
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = timeFormatted,
-                                fontSize = 42.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace,
-                                color = TextPrimary,
-                                letterSpacing = 1.sp,
-                                modifier = Modifier.testTag("timer_countdown_text")
-                            )
-                            Text(
-                                text = if (uiState.isRunning) "FOCUSING" else if (uiState.isPaused) "PAUSED" else "READY",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (uiState.isRunning) modeColor else TextSecondary,
-                                letterSpacing = 2.sp
-                            )
+                    // Timer Circular Ring displaying remaining time
+                    CircularTimerProgressIndicator(
+                        secondsRemaining = uiState.secondsRemaining,
+                        totalSeconds = uiState.totalSeconds,
+                        currentMode = uiState.currentMode,
+                        isRunning = uiState.isRunning,
+                        isPaused = uiState.isPaused,
+                        modeColor = modeColor,
+                        dialSize = 190.dp,
+                        strokeWidth = 9.dp,
+                        onClick = {
+                            if (uiState.isRunning) onPause() else onStart()
                         }
-                    }
+                    )
 
                     Spacer(modifier = Modifier.height(14.dp))
 
@@ -679,57 +645,20 @@ fun TimerScreen(
 
                 Spacer(modifier = Modifier.height(spacerGap))
 
-                // Middle Section 3: Circular Progress & Countdown Timer
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(timerRingSize)
-                        .clip(CircleShape)
-                        .clickable {
-                            if (uiState.isRunning) onPause() else onStart()
-                        }
-                ) {
-                    CircularProgressIndicator(
-                        progress = { 1f },
-                        modifier = Modifier.size(timerRingSize),
-                        color = DarkSurfaceVariant.copy(alpha = 0.7f),
-                        strokeWidth = 8.dp,
-                        trackColor = Color.Transparent,
-                        strokeCap = StrokeCap.Round
-                    )
-
-                    CircularProgressIndicator(
-                        progress = { animatedProgress },
-                        modifier = Modifier.size(timerRingSize),
-                        color = modeColor,
-                        strokeWidth = 8.dp,
-                        trackColor = Color.Transparent,
-                        strokeCap = StrokeCap.Round
-                    )
-
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = timeFormatted,
-                            fontSize = if (isCompactHeight) 36.sp else 42.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
-                            color = TextPrimary,
-                            letterSpacing = 1.sp,
-                            modifier = Modifier.testTag("timer_countdown_text")
-                        )
-
-                        Text(
-                            text = if (uiState.isRunning) "FOCUSING" else if (uiState.isPaused) "PAUSED" else "READY",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (uiState.isRunning) modeColor else TextSecondary,
-                            letterSpacing = 2.sp
-                        )
+                // Middle Section 3: Circular Progress Indicator displaying remaining time
+                CircularTimerProgressIndicator(
+                    secondsRemaining = uiState.secondsRemaining,
+                    totalSeconds = uiState.totalSeconds,
+                    currentMode = uiState.currentMode,
+                    isRunning = uiState.isRunning,
+                    isPaused = uiState.isPaused,
+                    modeColor = modeColor,
+                    dialSize = timerRingSize,
+                    strokeWidth = if (isCompactHeight) 8.dp else 9.dp,
+                    onClick = {
+                        if (uiState.isRunning) onPause() else onStart()
                     }
-                }
+                )
 
                 Spacer(modifier = Modifier.height(spacerGap))
 

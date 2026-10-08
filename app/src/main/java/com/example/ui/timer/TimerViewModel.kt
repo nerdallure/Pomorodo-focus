@@ -7,6 +7,9 @@ import com.example.audio.SoundManager
 import com.example.data.AppDatabase
 import com.example.data.PomodoroRepository
 import com.example.data.SessionEntity
+import com.example.data.SubTaskEntity
+import com.example.data.TaskEntity
+import com.example.data.TaskWithSubtasks
 import com.example.data.UserSettingsEntity
 import com.example.model.ArtTheme
 import com.example.model.PomodoroMode
@@ -81,7 +84,19 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
     val stats: StateFlow<StreakStats> = repository.completedSessions.mapToStats()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StreakStats())
 
+    val tasksWithSubtasks: StateFlow<List<TaskWithSubtasks>> = repository.tasksWithSubtasks
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     init {
+        // Auto-seed sample tasks if empty
+        viewModelScope.launch {
+            repository.allTasks.collect { list ->
+                if (list.isEmpty()) {
+                    seedDefaultTasks()
+                }
+            }
+        }
+
         viewModelScope.launch {
             repository.userSettings.collect { settings ->
                 val themes = allThemes.value
@@ -294,6 +309,9 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
                 artThemeName = artName,
                 taskTag = taskTag
             )
+            if (finishedMode == PomodoroMode.FOCUS) {
+                repository.recordPomodoroForTask(taskTag, durationMins)
+            }
         }
 
         val newCompletedRounds = if (finishedMode == PomodoroMode.FOCUS) {
@@ -377,6 +395,247 @@ class TimerViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.clearAllHistory()
         }
+    }
+
+    // ==========================================
+    // Task, Habit, Reminder & Schedule Operations
+    // ==========================================
+
+    fun createTask(
+        title: String,
+        description: String = "",
+        project: String = "Work",
+        priority: String = "MEDIUM",
+        dueDateMillis: Long? = null,
+        isRecurring: Boolean = false,
+        recurrenceRule: String = "NONE",
+        reminderMillis: Long? = null,
+        reminderDisplay: String? = null,
+        estimatedPomodoros: Int = 1,
+        subtaskTitles: List<String> = emptyList(),
+        isHabit: Boolean = false
+    ) {
+        viewModelScope.launch {
+            val task = TaskEntity(
+                title = title.trim(),
+                description = description.trim(),
+                project = project,
+                priority = priority,
+                dueDateMillis = dueDateMillis,
+                isRecurring = isRecurring,
+                recurrenceRule = recurrenceRule,
+                reminderMillis = reminderMillis,
+                reminderDisplay = reminderDisplay,
+                estimatedPomodoros = estimatedPomodoros,
+                isHabit = isHabit
+            )
+            val taskId = repository.insertTask(task)
+            subtaskTitles.forEachIndexed { index, subTitle ->
+                if (subTitle.isNotBlank()) {
+                    repository.insertSubtask(
+                        SubTaskEntity(
+                            taskId = taskId,
+                            title = subTitle.trim(),
+                            isCompleted = false,
+                            orderIndex = index
+                        )
+                    )
+                }
+            }
+            soundManager.playClickSound()
+        }
+    }
+
+    fun updateTask(task: TaskEntity) {
+        viewModelScope.launch {
+            repository.updateTask(task)
+            soundManager.playClickSound()
+        }
+    }
+
+    fun deleteTask(taskId: Long) {
+        viewModelScope.launch {
+            repository.deleteTask(taskId)
+            soundManager.playClickSound()
+        }
+    }
+
+    fun toggleTaskCompleted(item: TaskWithSubtasks) {
+        val task = item.task
+        viewModelScope.launch {
+            if (task.isHabit || task.isRecurring) {
+                val newStreak = task.habitStreak + 1
+                val nextDue = calculateNextRecurringDate(task.recurrenceRule, task.dueDateMillis ?: System.currentTimeMillis())
+                repository.updateTask(
+                    task.copy(
+                        habitStreak = newStreak,
+                        dueDateMillis = nextDue,
+                        isCompleted = false,
+                        completedAt = System.currentTimeMillis()
+                    )
+                )
+                soundManager.vibrateSessionComplete()
+            } else {
+                val nextState = !task.isCompleted
+                repository.updateTask(
+                    task.copy(
+                        isCompleted = nextState,
+                        completedAt = if (nextState) System.currentTimeMillis() else null
+                    )
+                )
+                soundManager.vibrateClick()
+            }
+        }
+    }
+
+    fun toggleSubtask(subtask: SubTaskEntity) {
+        viewModelScope.launch {
+            repository.updateSubtask(subtask.copy(isCompleted = !subtask.isCompleted))
+            soundManager.vibrateClick()
+        }
+    }
+
+    fun addSubtask(taskId: Long, title: String) {
+        if (title.isBlank()) return
+        viewModelScope.launch {
+            repository.insertSubtask(
+                SubTaskEntity(
+                    taskId = taskId,
+                    title = title.trim(),
+                    isCompleted = false
+                )
+            )
+            soundManager.playClickSound()
+        }
+    }
+
+    fun deleteSubtask(subtaskId: Long) {
+        viewModelScope.launch {
+            repository.deleteSubtask(subtaskId)
+        }
+    }
+
+    fun selectTaskForFocus(task: TaskEntity) {
+        setTaskTag(task.title)
+        if (_uiState.value.currentMode != PomodoroMode.FOCUS) {
+            switchMode(PomodoroMode.FOCUS)
+        }
+        soundManager.vibrateClick()
+    }
+
+    private fun calculateNextRecurringDate(rule: String, currentDueDate: Long): Long {
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = currentDueDate
+        val now = System.currentTimeMillis()
+        if (cal.timeInMillis < now) {
+            cal.timeInMillis = now
+        }
+        when (rule.uppercase()) {
+            "DAILY" -> cal.add(Calendar.DAY_OF_YEAR, 1)
+            "WEEKDAYS" -> {
+                do {
+                    cal.add(Calendar.DAY_OF_YEAR, 1)
+                } while (cal.get(Calendar.DAY_OF_WEEK) == Calendar.SATURDAY || cal.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY)
+            }
+            "EVERY_MONDAY" -> {
+                do {
+                    cal.add(Calendar.DAY_OF_YEAR, 1)
+                } while (cal.get(Calendar.DAY_OF_WEEK) != Calendar.MONDAY)
+            }
+            "WEEKLY" -> cal.add(Calendar.WEEK_OF_YEAR, 1)
+            "MONTHLY" -> cal.add(Calendar.MONTH, 1)
+            else -> cal.add(Calendar.DAY_OF_YEAR, 1)
+        }
+        return cal.timeInMillis
+    }
+
+    private suspend fun seedDefaultTasks() {
+        val todayMillis = System.currentTimeMillis()
+
+        // 1. Study Task with subtasks
+        val studyTaskId = repository.insertTask(
+            TaskEntity(
+                title = "Master Jetpack Compose & State Flow",
+                description = "Complete weekly Android architecture review and compose canvas animations.",
+                project = "Study",
+                priority = "HIGH",
+                dueDateMillis = todayMillis,
+                estimatedPomodoros = 3,
+                completedPomodoros = 1,
+                totalMinutesSpent = 25
+            )
+        )
+        repository.insertSubtask(SubTaskEntity(taskId = studyTaskId, title = "Review State hoisting & Flow", isCompleted = true, orderIndex = 0))
+        repository.insertSubtask(SubTaskEntity(taskId = studyTaskId, title = "Design Circular Timer dial", isCompleted = true, orderIndex = 1))
+        repository.insertSubtask(SubTaskEntity(taskId = studyTaskId, title = "Complete Subtask Checklist UI", isCompleted = false, orderIndex = 2))
+
+        // 2. Health & Habit task
+        repository.insertTask(
+            TaskEntity(
+                title = "Morning Mindfulness & Posture Stretch",
+                description = "10 minutes of serene focus breathing before starting deep work.",
+                project = "Health",
+                priority = "MEDIUM",
+                dueDateMillis = todayMillis,
+                isRecurring = true,
+                recurrenceRule = "DAILY",
+                reminderDisplay = "07:30 AM",
+                isHabit = true,
+                habitStreak = 5,
+                estimatedPomodoros = 1,
+                completedPomodoros = 1,
+                totalMinutesSpent = 15
+            )
+        )
+
+        // 3. Work Task
+        val workTaskId = repository.insertTask(
+            TaskEntity(
+                title = "Sprint Roadmap & Feature Delivery",
+                description = "Finalize Q4 priorities, task planner, and user experience updates.",
+                project = "Work",
+                priority = "HIGH",
+                dueDateMillis = todayMillis,
+                reminderDisplay = "02:00 PM",
+                estimatedPomodoros = 4,
+                completedPomodoros = 2,
+                totalMinutesSpent = 50
+            )
+        )
+        repository.insertSubtask(SubTaskEntity(taskId = workTaskId, title = "Organize task scheduling view", isCompleted = true, orderIndex = 0))
+        repository.insertSubtask(SubTaskEntity(taskId = workTaskId, title = "Verify Room database persistence", isCompleted = true, orderIndex = 1))
+        repository.insertSubtask(SubTaskEntity(taskId = workTaskId, title = "Implement reminder badges", isCompleted = false, orderIndex = 2))
+
+        // 4. Recurring Habit task: Every Monday
+        repository.insertTask(
+            TaskEntity(
+                title = "Weekly Review & Habit Planning",
+                description = "Reflect on accomplishments and plan the upcoming week.",
+                project = "Personal",
+                priority = "MEDIUM",
+                dueDateMillis = todayMillis,
+                isRecurring = true,
+                recurrenceRule = "EVERY_MONDAY",
+                reminderDisplay = "09:00 AM",
+                isHabit = true,
+                habitStreak = 3,
+                estimatedPomodoros = 2
+            )
+        )
+
+        // 5. Housework task
+        repository.insertTask(
+            TaskEntity(
+                title = "Organize Workspace & Ambient Plant Care",
+                description = "Clean desk space, water indoor plants, and prepare focus room.",
+                project = "Housework",
+                priority = "LOW",
+                dueDateMillis = todayMillis + (86400000L * 2),
+                isRecurring = true,
+                recurrenceRule = "WEEKLY",
+                estimatedPomodoros = 1
+            )
+        )
     }
 }
 

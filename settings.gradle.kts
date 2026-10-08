@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Art Focus"
+rootProject.name = "Pomodoro Art Focus"
 
 include(":app")

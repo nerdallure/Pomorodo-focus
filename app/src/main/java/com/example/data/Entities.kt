@@ -50,3 +50,42 @@ data class UserSettingsEntity(
     val currentTaskTag: String = "Deep Work",
     val fullScreenArtMode: Boolean = false
 )
+
+@Entity(tableName = "tasks")
+data class TaskEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val title: String,
+    val description: String = "",
+    val project: String = "Work", // Work, Study, Homework, Housework, Personal, Health
+    val priority: String = "MEDIUM", // HIGH, MEDIUM, LOW, NONE
+    val dueDateMillis: Long? = null,
+    val isRecurring: Boolean = false,
+    val recurrenceRule: String = "NONE", // NONE, DAILY, WEEKDAYS, EVERY_MONDAY, WEEKLY, MONTHLY
+    val reminderMillis: Long? = null,
+    val reminderDisplay: String? = null,
+    val isCompleted: Boolean = false,
+    val completedAt: Long? = null,
+    val estimatedPomodoros: Int = 1,
+    val completedPomodoros: Int = 0,
+    val totalMinutesSpent: Int = 0,
+    val isHabit: Boolean = false,
+    val habitStreak: Int = 0,
+    val lastCompletedDateString: String? = null,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "subtasks")
+data class SubTaskEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val taskId: Long,
+    val title: String,
+    val isCompleted: Boolean = false,
+    val orderIndex: Int = 0
+)
+
+data class TaskWithSubtasks(
+    val task: TaskEntity,
+    val subtasks: List<SubTaskEntity> = emptyList()
+)
